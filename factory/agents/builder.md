@@ -36,7 +36,24 @@ Para **cada subtarea** en la spec, en orden:
 ### 4. Si el PR supera 400 líneas
 Dividir en PRs separados por subtarea. Cada PR debe ser funcional por sí solo o usar feature flag.
 
-### 5. Abrir PR
+### 5. Thermos review (antes de abrir PR)
+Ejecutar thermos sobre el diff completo de la rama usando el Skill tool (`/thermos`).
+
+**Reglas de acción según resultado:**
+
+| Thermos verdict | Acción |
+|-----------------|--------|
+| APPROVE | Proceder a abrir PR |
+| REQUEST CHANGES — solo 🔵 nits | Proceder a abrir PR, incluir findings en descripción del PR |
+| REQUEST CHANGES — 🟡 o superior | Corregir todos los issues 🟡+ antes de abrir PR |
+| REQUEST CHANGES — 🔴 Critical | Corregir TODOS los issues críticos. Contar como intento fallido si requiere commits adicionales |
+
+**Si thermos detecta problemas que están fuera del alcance de la spec:**
+→ Marcar `[REQUIERE_DECISIÓN_HUMANA: thermos detectó [issue] fuera de scope de esta spec]` y abrir PR de todas formas con el issue documentado.
+
+No silenciar findings de thermos. No editar la spec para excluir lo que thermos detectó.
+
+### 6. Abrir PR
 - Título: `[SPEC-ID] [nombre de la spec]`
 - Body debe incluir:
   - Lista de criterios de aceptación con ✅ o ❌

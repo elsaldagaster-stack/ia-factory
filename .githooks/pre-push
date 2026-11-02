@@ -1,0 +1,74 @@
+#!/bin/bash
+# Thermos review before push (human commits only)
+# Factory branches skip this — they use the builder workflow + factory-review CI
+#
+# Setup: git config core.hooksPath .githooks
+
+BRANCH=$(git branch --show-current)
+
+# Skip factory branches — handled by builder.md + factory-review.yml
+if [[ "$BRANCH" == factory/* ]]; then
+  echo "[pre-push] Factory branch — thermos handled in PR workflow. Skipping."
+  exit 0
+fi
+
+# Skip if pushing main (should never happen due to branch protection, but just in case)
+if [[ "$BRANCH" == "main" ]] || [[ "$BRANCH" == "master" ]]; then
+  echo "[pre-push] Direct push to main — blocked. Use PR."
+  exit 1
+fi
+
+# Get diff stats
+DIFF_STAT=$(git diff main...HEAD --stat 2>/dev/null)
+if [ -z "$DIFF_STAT" ]; then
+  echo "[pre-push] No diff vs main — skipping thermos review."
+  exit 0
+fi
+
+LINES_CHANGED=$(git diff main...HEAD --shortstat 2>/dev/null | grep -oP '\d+(?= insertion)' | head -1 || echo 0)
+if [ "${LINES_CHANGED:-0}" -lt 10 ]; then
+  echo "[pre-push] Diff trivially small (${LINES_CHANGED} lines) — skipping thermos review."
+  exit 0
+fi
+
+echo ""
+echo "🌡️  Thermos review — branch: $BRANCH"
+echo "   $(git diff main...HEAD --shortstat 2>/dev/null)"
+echo ""
+
+# Check if claude CLI is available
+if ! command -v claude &> /dev/null; then
+  echo "⚠️  claude CLI not found in PATH."
+  echo "   Run thermos manually in Claude Code before pushing:"
+  echo "   > /thermos"
+  echo ""
+  read -p "   Push without thermos review? (y/N) " -n 1 -r
+  echo
+  [[ $REPLY =~ ^[Yy]$ ]] || exit 1
+  exit 0
+fi
+
+# Run thermos via Claude Code CLI
+# --print mode: non-interactive, outputs result to stdout
+echo "Running thermos review (this may take 30-60 seconds)..."
+echo ""
+claude --print "/thermos"
+THERMOS_EXIT=$?
+
+echo ""
+
+if [ $THERMOS_EXIT -ne 0 ]; then
+  echo "⚠️  Thermos review exited with error (code: $THERMOS_EXIT)."
+  read -p "   Push anyway? (y/N) " -n 1 -r
+  echo
+  [[ $REPLY =~ ^[Yy]$ ]] || exit 1
+fi
+
+# Thermos completed — user sees the verdict in stdout above
+# Ask for confirmation if there were findings (we can't parse verdict reliably in bash)
+echo "Review complete. Check verdict above."
+read -p "Proceed with push? (Y/n) " -n 1 -r
+echo
+[[ ! $REPLY =~ ^[Nn]$ ]] || exit 1
+
+exit 0
