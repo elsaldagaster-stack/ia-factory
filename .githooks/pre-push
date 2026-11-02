@@ -6,6 +6,13 @@
 
 BRANCH=$(git branch --show-current)
 
+# Skip delete operations (stdin contains zero-sha for deletes)
+while read local_ref local_sha remote_ref remote_sha; do
+  if [[ "$local_sha" == "0000000000000000000000000000000000000000" ]]; then
+    exit 0
+  fi
+done
+
 # Skip factory branches — handled by builder.md + factory-review.yml
 if [[ "$BRANCH" == factory/* ]]; then
   echo "[pre-push] Factory branch — thermos handled in PR workflow. Skipping."
