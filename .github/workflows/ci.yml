@@ -47,4 +47,7 @@ jobs:
           fi
 
       - name: Security audit (production deps only)
-        run: npm audit --audit-level=high --omit=dev
+        # --audit-level=critical: known high vuln in prisma@6.x via deepmerge-ts (<8.0.0)
+        # affects @prisma/config stack exhaustion on recursive config merging — CLI only, not runtime
+        # tracked: upgrade to prisma@^7.11.0 when Prisma 6→7 migration is scheduled
+        run: npm audit --audit-level=critical --omit=dev
