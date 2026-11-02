@@ -9,41 +9,112 @@ Los agentes lo leen pero nunca lo modifican.
 
 ## Stack Tecnológico
 
-- Lenguaje principal: TypeScript 5.x
-- Runtime: Node.js 20.x (LTS)
-- Framework: [completar — Express / Fastify / NestJS / ninguno]
-- Base de datos: [completar]
-- ORM/Query builder: [completar si aplica]
-- Hosting/Infraestructura: [completar]
+| Capa | Tech |
+|------|------|
+| Framework | Next.js 16.4 (App Router) |
+| UI | React 19 + Tabler Icons |
+| CSS | Tabler Core (Bootstrap-based) |
+| Auth | Clerk |
+| ORM | Prisma 6 |
+| DB | Neon (PostgreSQL serverless) |
+| Email | Resend |
+| Testing | Vitest + Playwright |
+| Lang | TypeScript 5 |
+
+---
 
 ## Decisiones Arquitectónicas
 
 Referencia a ADRs en `docs/decisions/`:
 - [001] TBD Policy: Trunk-Based Development, max 24h de vida por rama
+- [002] Thermos hooks: revisión pre-push + en builder antes de abrir PR
+
+## Estructura de carpetas (Next.js App Router)
+
+```
+app/                  # Rutas y layouts (App Router)
+  (auth)/             # Grupo de rutas protegidas por Clerk
+  api/                # Route Handlers
+components/           # Componentes React reutilizables
+  ui/                 # Componentes UI puros (sin lógica de negocio)
+lib/                  # Utilidades, helpers, lógica compartida
+  db/                 # Cliente Prisma + queries
+  email/              # Templates y envío con Resend
+prisma/               # Schema y migraciones
+public/               # Assets estáticos
+tests/
+  unit/               # Vitest — lógica pura
+  integration/        # Vitest — con DB real (Neon branch de test)
+  e2e/                # Playwright — flujos completos
+```
+
+---
 
 ## Patrones de Código
 
-- Nomenclatura: camelCase para variables/funciones, PascalCase para tipos/clases, UPPER_SNAKE_CASE para constantes
-- Funciones: preferir funciones puras, sin side effects cuando sea posible
-- Manejo de errores: lanzar errores tipados, nunca silenciar con catch vacío
+### General
+- Nomenclatura: camelCase para variables/funciones, PascalCase para componentes/tipos/clases
 - Async: siempre async/await, nunca callbacks anidados
-- Imports: named exports preferidos sobre default exports
-- Tests: Jest + ts-jest, describe/it, un assert lógico por test
+- Imports: named exports preferidos sobre default exports (excepción: page.tsx y layout.tsx de Next.js que DEBEN ser default export)
+- No usar `any` — usar `unknown` + type guards
+- No usar `// @ts-ignore` — usar `// @ts-expect-error` con comentario
+
+### Next.js App Router
+- Server Components por defecto — añadir `'use client'` solo cuando necesario (eventos, hooks, estado)
+- Fetching de datos en Server Components, nunca en Client Components salvo casos justificados
+- Route Handlers en `app/api/` para endpoints externos
+- `loading.tsx` y `error.tsx` para cada segmento con fetch async
+- No usar `getServerSideProps` ni `getStaticProps` — son Pages Router, no App Router
+
+### Clerk (Auth)
+- Proteger rutas en `middleware.ts` con `clerkMiddleware()`
+- Acceder a usuario en Server Components con `auth()` de `@clerk/nextjs/server`
+- Acceder a usuario en Client Components con `useUser()` o `useAuth()`
+- NUNCA confiar en el userId del cliente — siempre leerlo del servidor
+
+### Prisma + Neon
+- Un solo cliente Prisma exportado desde `lib/db/client.ts` (singleton pattern)
+- Nunca instanciar `new PrismaClient()` fuera de `lib/db/client.ts`
+- Migraciones solo con `prisma migrate dev` (nunca editar manualmente archivos de migración)
+- Neon branches: `main` para producción, `dev` para development, `test` para tests de integración
+- Transacciones para operaciones multi-tabla
+
+### Resend (Email)
+- Templates en `lib/email/templates/` como React Email components
+- Envío solo desde Server Actions o Route Handlers, nunca desde Client Components
+- Variables de entorno: `RESEND_API_KEY`
+
+### Tabler + CSS
+- Usar clases de Tabler Core (Bootstrap-based) — no escribir CSS custom cuando existe clase de Tabler
+- Tabler Icons: importar individualmente (`import { IconName } from '@tabler/icons-react'`), nunca importar el paquete completo
+- No mezclar Tabler con otras librerías de componentes
+
+---
 
 ## Lo que NO hacemos
 
-- No usar `any` en TypeScript (usar `unknown` y type guards)
-- No usar `// @ts-ignore` (usar `// @ts-expect-error` con comentario)
-- No callbacks anidados — usar async/await
-- No variables globales mutables
-- No lógica de negocio en archivos de test
-- No tests que dependen del orden de ejecución
-- No hardcodear valores de configuración (usar variables de entorno)
+- No usar Pages Router (`pages/` directory) — todo en App Router
+- No usar `getServerSideProps` / `getStaticProps` / `getStaticPaths`
+- No client-side fetching con useEffect para datos iniciales de página — usar Server Components
+- No instanciar múltiples PrismaClient
+- No callbacks anidados — async/await
+- No hardcodear strings de conexión o API keys — variables de entorno siempre
+- No `any` en TypeScript
+- No lógica de negocio en componentes UI (`components/ui/`)
+- No consultas SQL raw salvo casos excepcionales documentados en ADR
+- No enviar emails desde Client Components
+
+---
 
 ## Dependencias Externas
 
-[Completar cuando se agreguen dependencias]
-- [Servicio]: [para qué se usa, nivel de criticidad]
+| Servicio | Uso | Criticidad | Variable de entorno |
+|----------|-----|------------|---------------------|
+| Neon | PostgreSQL serverless (DB principal) | Alta | `DATABASE_URL` |
+| Clerk | Autenticación y gestión de usuarios | Alta | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY` |
+| Resend | Envío de emails transaccionales | Media | `RESEND_API_KEY` |
+
+---
 
 ## Estado Actual del Sistema
 

@@ -6,6 +6,12 @@
 
 BRANCH=$(git branch --show-current)
 
+# Skip non-interactive contexts (scripts, CI, background processes)
+if [ ! -t 1 ]; then
+  echo "[pre-push] Non-interactive context — skipping thermos (run manually in Claude Code)."
+  exit 0
+fi
+
 # Skip delete operations (stdin contains zero-sha for deletes)
 while read local_ref local_sha remote_ref remote_sha; do
   if [[ "$local_sha" == "0000000000000000000000000000000000000000" ]]; then

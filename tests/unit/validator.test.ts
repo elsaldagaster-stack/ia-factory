@@ -1,3 +1,4 @@
+import { describe, it, expect, vi } from 'vitest';
 import { validateEmail, validateNonEmpty, Logger } from '../../src/validator';
 
 describe('validateEmail', () => {
@@ -14,7 +15,7 @@ describe('validateEmail', () => {
   });
 
   it('calls logger.warn when email is invalid', () => {
-    const mockLogger: Logger = { warn: jest.fn() };
+    const mockLogger: Logger = { warn: vi.fn() };
 
     validateEmail('bad-email', mockLogger);
 
@@ -22,7 +23,7 @@ describe('validateEmail', () => {
   });
 
   it('does not call logger when email is valid', () => {
-    const mockLogger: Logger = { warn: jest.fn() };
+    const mockLogger: Logger = { warn: vi.fn() };
 
     validateEmail('user@example.com', mockLogger);
 
