@@ -12,9 +12,15 @@ if [[ "$BRANCH" == factory/* ]]; then
   exit 0
 fi
 
-# Skip if pushing main (should never happen due to branch protection, but just in case)
+# Allow initial push to main (remote has no commits yet)
+# After first push, branch protection on GitHub blocks direct pushes
 if [[ "$BRANCH" == "main" ]] || [[ "$BRANCH" == "master" ]]; then
-  echo "[pre-push] Direct push to main — blocked. Use PR."
+  REMOTE_COMMITS=$(git ls-remote origin "$BRANCH" 2>/dev/null | wc -l)
+  if [ "$REMOTE_COMMITS" -eq 0 ]; then
+    echo "[pre-push] Initial push to $BRANCH — allowed. Branch protection activates after this."
+    exit 0
+  fi
+  echo "[pre-push] Direct push to $BRANCH — blocked. Use PR."
   exit 1
 fi
 
