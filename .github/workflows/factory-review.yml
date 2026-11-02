@@ -1,0 +1,101 @@
+name: Factory Review
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  factory-review:
+    # Solo ejecuta en ramas factory/
+    if: startsWith(github.head_ref, 'factory/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      pull-requests: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Extract spec ID from branch
+        id: spec
+        run: |
+          BRANCH="${{ github.head_ref }}"
+          SPEC_ID=$(echo "$BRANCH" | grep -oP 'SPEC-\d+' | head -1)
+          echo "spec_id=$SPEC_ID" >> $GITHUB_OUTPUT
+          echo "Spec ID: $SPEC_ID"
+
+      - name: Get diff stats
+        id: diff
+        run: |
+          DIFF=$(git diff --stat origin/${{ github.base_ref }}...HEAD)
+          echo "diff_stats<<EOF" >> $GITHUB_OUTPUT
+          echo "$DIFF" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      # === SECURITY REVIEW ===
+      # TODO Fase 2: Reemplazar con llamada real al modelo PARAM_MODEL_REVIEWER_SECURITY
+      # El modelo recibe: diff completo + instrucciones de factory/agents/reviewer-security.md
+      # El modelo retorna: JSON según formato definido en reviewer-security.md
+      - name: Security Review (placeholder)
+        id: security
+        run: |
+          echo "security_result=PENDING_AUTOMATION" >> $GITHUB_OUTPUT
+          echo "::notice::Security review automático pendiente (Fase 2). Requiere revisión manual."
+
+      # === CODE REVIEW ===
+      # TODO Fase 2: Reemplazar con llamada real al modelo PARAM_MODEL_REVIEWER_CODE
+      - name: Code Review (placeholder)
+        id: code_review
+        run: |
+          echo "code_result=PENDING_AUTOMATION" >> $GITHUB_OUTPUT
+          echo "::notice::Code review automático pendiente (Fase 2). Requiere revisión manual."
+
+      # === POST COMMENT ===
+      - name: Post review status comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const specId = '${{ steps.spec.outputs.spec_id }}';
+            const body = `## Factory Review — 🔍 PENDIENTE REVISIÓN MANUAL
+
+**Spec:** ${specId || 'No detectado — verificar nombre de rama'}
+
+> ⚙️ **Fase 1:** La revisión automática por agentes se activará en Fase 2.
+> Por ahora, revisar manualmente usando los checklists en:
+> - \`factory/agents/reviewer-security.md\`
+> - \`factory/agents/reviewer-code.md\`
+> - \`factory/agents/approver.md\`
+
+**Checklist manual de seguridad:**
+- [ ] No hay credenciales hardcodeadas
+- [ ] Inputs validados
+- [ ] No hay queries con concatenación de strings
+- [ ] No hay datos sensibles en logs
+
+**Checklist manual de código:**
+- [ ] Criterios de aceptación de la spec cumplidos
+- [ ] Tests cubren los criterios
+- [ ] Consistente con BRAIN.md
+- [ ] PR ≤ 400 líneas
+
+**Clasificación manual:** SIMPLE ✅ / COMPLEX 🔍
+`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });

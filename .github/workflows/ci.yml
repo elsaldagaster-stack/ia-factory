@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npx eslint . --ext .ts,.tsx --max-warnings 0
+
+      - name: Tests
+        run: npx jest --coverage --ci
+
+      - name: Check PR size
+        if: github.event_name == 'pull_request'
+        run: |
+          ADDED=$(git diff --stat origin/${{ github.base_ref }}...HEAD | grep -oP '\d+(?= insertion)' | head -1 || echo 0)
+          DELETED=$(git diff --stat origin/${{ github.base_ref }}...HEAD | grep -oP '\d+(?= deletion)' | head -1 || echo 0)
+          CHANGED=$((${ADDED:-0} + ${DELETED:-0}))
+          echo "Lines changed: $CHANGED (max: 400)"
+          if [ "$CHANGED" -gt 400 ]; then
+            echo "::error::PR too large: $CHANGED lines changed. Maximum: 400. Split into smaller PRs."
+            exit 1
+          fi
+
+      - name: Security audit
+        run: npm audit --audit-level=high

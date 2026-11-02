@@ -1,0 +1,46 @@
+name: PR Check
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, edited]
+
+jobs:
+  branch-naming:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check branch naming
+        run: |
+          BRANCH="${{ github.head_ref }}"
+          echo "Branch: $BRANCH"
+
+          # Ramas factory deben seguir el patrón factory/SPEC-XXX-descripcion
+          if [[ "$BRANCH" == factory/* ]]; then
+            if [[ ! "$BRANCH" =~ ^factory/SPEC-[0-9]+-[a-z0-9-]+$ ]]; then
+              echo "::error::Factory branch must follow pattern: factory/SPEC-[number]-[description]"
+              echo "::error::Example: factory/SPEC-001-add-user-validation"
+              exit 1
+            fi
+          fi
+
+          # Ramas de larga duración no permitidas
+          if [[ "$BRANCH" == feature/* ]] || [[ "$BRANCH" == feat/* ]]; then
+            echo "::warning::Feature branches should be short-lived (max 24h). Use factory/ prefix for factory tasks."
+          fi
+
+  pr-title:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check PR title format
+        run: |
+          TITLE="${{ github.event.pull_request.title }}"
+          echo "PR Title: $TITLE"
+
+          # Factory PRs deben incluir el SPEC-ID
+          BRANCH="${{ github.head_ref }}"
+          if [[ "$BRANCH" == factory/* ]]; then
+            if [[ ! "$TITLE" =~ \[SPEC-[0-9]+\] ]]; then
+              echo "::error::Factory PR title must include spec ID. Format: [SPEC-XXX] Description"
+              exit 1
+            fi
+          fi
