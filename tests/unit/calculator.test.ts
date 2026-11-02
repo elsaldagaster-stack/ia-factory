@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest';
 import { add, subtract, divide, multiply } from '../../src/calculator';
 
 describe('calculator', () => {

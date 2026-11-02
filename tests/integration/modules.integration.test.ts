@@ -1,6 +1,4 @@
-// Integration tests verify real dependencies and module contracts
-// Unlike unit tests, these do NOT mock — they use real implementations
-
+import { describe, it, expect } from 'vitest';
 import * as calculator from '../../src/calculator';
 import * as validator from '../../src/validator';
 
