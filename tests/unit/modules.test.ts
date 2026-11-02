@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import * as calculator from '../../src/calculator';
 import * as validator from '../../src/validator';
 
-describe('module contracts (integration)', () => {
-  describe('calculator exports', () => {
+describe('module exports', () => {
+  describe('calculator', () => {
     it('exports add as a function', () => {
       expect(typeof calculator.add).toBe('function');
     });
@@ -23,7 +23,7 @@ describe('module contracts (integration)', () => {
     });
   });
 
-  describe('validator exports', () => {
+  describe('validator', () => {
     it('exports validateEmail as a function', () => {
       expect(typeof validator.validateEmail).toBe('function');
     });
