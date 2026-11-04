@@ -79,6 +79,7 @@ tests/
 - Migraciones solo con `prisma migrate dev` (nunca editar manualmente archivos de migración)
 - Neon branches: `main` para producción, `dev` para development, `test` para tests de integración
 - Transacciones para operaciones multi-tabla
+- **Tests unitarios:** cualquier test que importe código que use `prisma` DEBE mockear `lib/db/client.ts` con `vi.mock('../../lib/db/client', () => ({ prisma: { ... } }))` — el cliente real requiere `DATABASE_URL`
 
 ### Resend (Email)
 - Templates en `lib/email/templates/` como React Email components
