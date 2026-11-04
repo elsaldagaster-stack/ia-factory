@@ -1,5 +1,7 @@
 import { Resend } from 'resend';
 
+let _client: Resend | null = null;
+
 export interface SendEmailParams {
   to: string | string[];
   subject: string;
@@ -23,8 +25,8 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
   }
 
   try {
-    const resend = new Resend(apiKey);
-    const { data, error } = await resend.emails.send({
+    if (!_client) _client = new Resend(apiKey);
+    const { data, error } = await _client.emails.send({
       from,
       to: params.to,
       subject: params.subject,
@@ -35,7 +37,11 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
       return { success: false, error: error.message };
     }
 
-    return { success: true, id: data!.id };
+    if (!data?.id) {
+      return { success: false, error: 'Resend returned no message id' };
+    }
+
+    return { success: true, id: data.id };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     return { success: false, error: message };
