@@ -1,10 +1,10 @@
-const DATE_FORMAT = new Intl.DateTimeFormat('es-AR', {
+const DATE_FORMAT = new Intl.DateTimeFormat('es-PE', {
   day: '2-digit',
   month: '2-digit',
   year: 'numeric',
 });
 
-const DATETIME_FORMAT = new Intl.DateTimeFormat('es-AR', {
+const DATETIME_FORMAT = new Intl.DateTimeFormat('es-PE', {
   day: '2-digit',
   month: '2-digit',
   year: 'numeric',

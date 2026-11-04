@@ -22,6 +22,7 @@ Estado deseado: módulo `lib/format.ts` con funciones tipadas para formatear fec
 - [x] Nomenclatura: camelCase para funciones, named exports
 - [x] No usar `any` — tipos explícitos
 - [x] No dependencias nuevas — usar `Intl` nativo de JavaScript
+- [x] Locale: `es-PE` (mercado objetivo: Perú)
 
 ---
 
@@ -77,7 +78,8 @@ Estado deseado: módulo `lib/format.ts` con funciones tipadas para formatear fec
 ## Decisiones de Diseño Ya Tomadas
 
 - Usar `Intl.DateTimeFormat` nativo — no agregar `date-fns` ni similares
-- Locale default `es-AR` — acorde con el mercado objetivo (LATAM)
+- Locale default `es-PE` — mercado objetivo: Perú
+- Locale `es-PE` — no `es-AR`, no `en-US`
 - `formatDate` retorna `dd/mm/yyyy` — no ISO, no US format
 - `truncate` usa `"..."` (tres puntos) no ellipsis unicode `"…"` — mayor compatibilidad
 
