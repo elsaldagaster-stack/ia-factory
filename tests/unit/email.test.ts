@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { sendEmail } from '../../lib/email/index';
 
 const mockSend = vi.hoisted(() => vi.fn());
@@ -15,6 +15,10 @@ describe('sendEmail', () => {
     vi.clearAllMocks();
     vi.stubEnv('RESEND_API_KEY', 'test-key');
     vi.stubEnv('RESEND_FROM_EMAIL', 'noreply@test.com');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   it('returns success with id on valid params', async () => {
@@ -90,6 +94,18 @@ describe('sendEmail', () => {
     });
 
     expect(result).toEqual({ success: false, error: 'Network failure' });
+  });
+
+  it('returns failure when Resend returns null data and null error', async () => {
+    mockSend.mockResolvedValueOnce({ data: null, error: null });
+
+    const result = await sendEmail({
+      to: 'user@example.com',
+      subject: 'Hello',
+      html: '<p>Hi</p>',
+    });
+
+    expect(result).toEqual({ success: false, error: 'Resend returned no message id' });
   });
 
   it('returns failure when RESEND_API_KEY is missing', async () => {
