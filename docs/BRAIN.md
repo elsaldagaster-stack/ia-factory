@@ -4,6 +4,7 @@
 Los agentes lo leen pero nunca lo modifican.
 
 Última actualización: 2026-11-02
+Mercado objetivo: Perú (es-PE) 
 
 ---
 
