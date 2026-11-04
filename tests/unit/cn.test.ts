@@ -29,4 +29,9 @@ describe('cn', () => {
   it('handles mix of empty string and valid class', () => {
     expect(cn('', 'btn')).toBe('btn');
   });
+
+  it('passes whitespace-only strings through (not filtered)', () => {
+    // whitespace-only strings are truthy — callers must trim inputs if needed
+    expect(cn('  ', 'btn')).toBe('   btn');
+  });
 });
