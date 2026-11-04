@@ -3,24 +3,29 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // Pooled URL (pgBouncer) — for queries
+  directUrl = env("DIRECT_URL") // Unpooled URL — required for prisma migrate
 }
 
 model Project {
   id          String        @id @default(cuid())
-  name        String
+  name        String        @db.VarChar(255)
   description String?
   status      ProjectStatus @default(ACTIVE)
-  ownerId     String
+  ownerId     String        @db.VarChar(64) // Clerk user ID — format: user_<26-char-nanoid>
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
-  @@index([ownerId])
+  @@index([ownerId, createdAt(sort: Desc)]) // covers: WHERE ownerId = ? ORDER BY createdAt DESC
+  @@map("projects")
 }
 
+// ACTIVE: project is being worked on
+// COMPLETED: project delivered successfully
+// ARCHIVED: project paused or abandoned
 enum ProjectStatus {
   ACTIVE
-  ARCHIVED
   COMPLETED
+  ARCHIVED
 }
