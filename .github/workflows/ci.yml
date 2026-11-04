@@ -18,18 +18,19 @@ jobs:
 
       - name: Detect doc-only change
         id: paths
+        shell: bash
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             CHANGED=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
             echo "Changed files:"
             echo "$CHANGED"
-            CODE=$(echo "$CHANGED" | grep -Ecv '(\.md$|^docs/|^factory/agents/)' || true)
+            CODE=$(echo "$CHANGED" | grep -Ev '(\.md$|^docs/|^factory/agents/)' | grep -c . || true)
             [[ ${CODE:-0} -gt 0 ]] && echo "code_changed=true" >> "$GITHUB_OUTPUT" \
                                     || echo "code_changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "code_changed=true" >> "$GITHUB_OUTPUT"
           fi
-          grep code_changed "$GITHUB_OUTPUT"
+          grep code_changed "$GITHUB_OUTPUT" || true
 
       - name: Setup Node.js
         if: steps.paths.outputs.code_changed == 'true'
