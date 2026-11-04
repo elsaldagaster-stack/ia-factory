@@ -16,26 +16,46 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Detect doc-only change
+        id: paths
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            CHANGED=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
+            echo "Changed files:"
+            echo "$CHANGED"
+            CODE=$(echo "$CHANGED" | grep -Ecv '(\.md$|^docs/|^factory/agents/)' || true)
+            [[ ${CODE:-0} -gt 0 ]] && echo "code_changed=true" >> "$GITHUB_OUTPUT" \
+                                    || echo "code_changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "code_changed=true" >> "$GITHUB_OUTPUT"
+          fi
+          grep code_changed "$GITHUB_OUTPUT"
+
       - name: Setup Node.js
+        if: steps.paths.outputs.code_changed == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
       - name: Install dependencies
+        if: steps.paths.outputs.code_changed == 'true'
         run: npm ci
 
       - name: Type check
+        if: steps.paths.outputs.code_changed == 'true'
         run: npm run type-check
 
       - name: Lint
+        if: steps.paths.outputs.code_changed == 'true'
         run: npm run lint
 
       - name: Tests
+        if: steps.paths.outputs.code_changed == 'true'
         run: npm test
 
       - name: Check PR size
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && steps.paths.outputs.code_changed == 'true'
         run: |
           # Exclude generated files from size check
           DIFF=$(git diff origin/${{ github.base_ref }}...HEAD \
@@ -51,6 +71,7 @@ jobs:
           fi
 
       - name: Security audit (production deps only)
+        if: steps.paths.outputs.code_changed == 'true'
         # --audit-level=critical: known high vuln in prisma@6.x via deepmerge-ts (<8.0.0)
         # affects @prisma/config stack exhaustion on recursive config merging — CLI only, not runtime
         # tracked: upgrade to prisma@^7.11.0 when Prisma 6→7 migration is scheduled
