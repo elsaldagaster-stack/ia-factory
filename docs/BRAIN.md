@@ -80,6 +80,7 @@ tests/
 - Neon branches: `main` para producción, `dev` para development, `test` para tests de integración
 - Transacciones para operaciones multi-tabla
 - **Tests unitarios:** cualquier test que importe código que use `prisma` DEBE mockear `lib/db/client.ts` con `vi.mock('../../lib/db/client', () => ({ prisma: { ... } }))` — el cliente real requiere `DATABASE_URL`
+- **Hard delete:** si se agrega `deleteProject` en el futuro, DEBE ir en `lib/db/projects.ts` con `where: { id, ownerId }` — nunca llamar `prisma.project.delete` directamente desde Server Actions
 
 ### Resend (Email)
 - Templates en `lib/email/templates/` como React Email components
