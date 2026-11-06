@@ -1,0 +1,123 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { getProjects, getProject, createProject } from '../../app/actions/projects';
+
+const mockAuth = vi.hoisted(() => vi.fn());
+const mockGetProjectsByOwner = vi.hoisted(() => vi.fn());
+const mockGetProjectById = vi.hoisted(() => vi.fn());
+const mockCreateProject = vi.hoisted(() => vi.fn());
+
+vi.mock('@clerk/nextjs/server', () => ({ auth: mockAuth }));
+vi.mock('../../lib/db/projects', () => ({
+  getProjectsByOwner: mockGetProjectsByOwner,
+  getProjectById: mockGetProjectById,
+  createProject: mockCreateProject,
+}));
+
+const USER_ID = 'user_abc123';
+
+const projectFixture = {
+  id: 'proj_1',
+  name: 'Test Project',
+  description: null,
+  status: 'ACTIVE' as const,
+  ownerId: USER_ID,
+  createdAt: new Date('2026-01-01'),
+  updatedAt: new Date('2026-01-01'),
+};
+
+describe('getProjects', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns projects for authenticated user', async () => {
+    mockAuth.mockResolvedValueOnce({ userId: USER_ID });
+    mockGetProjectsByOwner.mockResolvedValueOnce([projectFixture]);
+
+    const result = await getProjects();
+
+    expect(result).toEqual([projectFixture]);
+    expect(mockGetProjectsByOwner).toHaveBeenCalledWith(USER_ID);
+  });
+
+  it('throws when user is not authenticated', async () => {
+    mockAuth.mockResolvedValueOnce({ userId: null });
+
+    await expect(getProjects()).rejects.toThrow('Unauthorized');
+  });
+});
+
+describe('getProject', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns project for authenticated user', async () => {
+    mockAuth.mockResolvedValueOnce({ userId: USER_ID });
+    mockGetProjectById.mockResolvedValueOnce(projectFixture);
+
+    const result = await getProject('proj_1');
+
+    expect(result).toEqual(projectFixture);
+    expect(mockGetProjectById).toHaveBeenCalledWith('proj_1', USER_ID);
+  });
+
+  it('returns null when project not found or not owned', async () => {
+    mockAuth.mockResolvedValueOnce({ userId: USER_ID });
+    mockGetProjectById.mockResolvedValueOnce(null);
+
+    const result = await getProject('proj_999');
+
+    expect(result).toBeNull();
+  });
+
+  it('throws when user is not authenticated', async () => {
+    mockAuth.mockResolvedValueOnce({ userId: null });
+
+    await expect(getProject('proj_1')).rejects.toThrow('Unauthorized');
+  });
+});
+
+describe('createProject', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('creates project and returns success result', async () => {
+    mockAuth.mockResolvedValueOnce({ userId: USER_ID });
+    mockCreateProject.mockResolvedValueOnce(projectFixture);
+
+    const result = await createProject({ name: 'Test Project' });
+
+    expect(result).toEqual({ success: true, project: projectFixture });
+    expect(mockCreateProject).toHaveBeenCalledWith({
+      name: 'Test Project',
+      ownerId: USER_ID,
+    });
+  });
+
+  it('passes description when provided', async () => {
+    mockAuth.mockResolvedValueOnce({ userId: USER_ID });
+    mockCreateProject.mockResolvedValueOnce({ ...projectFixture, description: 'Desc' });
+
+    const result = await createProject({ name: 'Test Project', description: 'Desc' });
+
+    expect(result).toEqual({ success: true, project: { ...projectFixture, description: 'Desc' } });
+    expect(mockCreateProject).toHaveBeenCalledWith({
+      name: 'Test Project',
+      ownerId: USER_ID,
+      description: 'Desc',
+    });
+  });
+
+  it('returns failure result when DB throws', async () => {
+    mockAuth.mockResolvedValueOnce({ userId: USER_ID });
+    mockCreateProject.mockRejectedValueOnce(new Error('DB connection failed'));
+
+    const result = await createProject({ name: 'Test Project' });
+
+    expect(result).toEqual({ success: false, error: 'DB connection failed' });
+  });
+
+  it('returns failure result when user is not authenticated', async () => {
+    mockAuth.mockResolvedValueOnce({ userId: null });
+
+    const result = await createProject({ name: 'Test Project' });
+
+    expect(result).toEqual({ success: false, error: 'Unauthorized' });
+  });
+});
