@@ -15,15 +15,22 @@ export async function formAction(
   if (!name) {
     return { success: false, error: 'El nombre es requerido' };
   }
-  return createProject({ name });
+  try {
+    return await createProject({ name });
+  } catch {
+    return { success: false, error: 'Error inesperado. Intente nuevamente.' };
+  }
 }
 
 export default function CreateProjectForm(): React.ReactElement {
   const [state, dispatch, isPending] = useActionState(formAction, null);
+  const successKey = state !== null && state.success === true ? state.project.id : '';
 
   return (
-    <form action={dispatch}>
+    <form action={dispatch} key={successKey}>
+      <label htmlFor="project-name">Nombre del proyecto</label>
       <input
+        id="project-name"
         name="name"
         type="text"
         placeholder="Nombre del proyecto"
@@ -32,8 +39,11 @@ export default function CreateProjectForm(): React.ReactElement {
       <button type="submit" disabled={isPending}>
         {isPending ? 'Creando...' : 'Crear proyecto'}
       </button>
-      {state?.success === false && <p role="alert">{state.error}</p>}
-      {state?.success === true && <p>Proyecto creado exitosamente</p>}
+      {state !== null && (
+        state.success
+          ? <p>Proyecto creado exitosamente</p>
+          : <p role="alert">{state.error}</p>
+      )}
     </form>
   );
 }

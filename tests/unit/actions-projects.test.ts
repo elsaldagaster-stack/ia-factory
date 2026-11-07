@@ -77,6 +77,12 @@ describe('getProject', () => {
 describe('createProject', () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it('returns failure result when name is empty', async () => {
+    const result = await createProject({ name: '   ' });
+    expect(result).toEqual({ success: false, error: 'El nombre es requerido' });
+    expect(mockCreateProject).not.toHaveBeenCalled();
+  });
+
   it('creates project and returns success result', async () => {
     mockAuth.mockResolvedValueOnce({ userId: USER_ID });
     mockCreateProject.mockResolvedValueOnce(projectFixture);

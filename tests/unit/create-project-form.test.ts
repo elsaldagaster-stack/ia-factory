@@ -60,6 +60,15 @@ describe('formAction', () => {
     const result = await formAction(null, fd);
     expect(result).toEqual(expected);
   });
+
+  it('returns generic error when createProject throws', async () => {
+    const { formAction } = await import('@/components/CreateProjectForm');
+    const fd = new FormData();
+    fd.set('name', 'Test Project');
+    mockCreateProject.mockRejectedValueOnce(new Error('Network error'));
+    const result = await formAction(null, fd);
+    expect(result).toEqual({ success: false, error: 'Error inesperado. Intente nuevamente.' });
+  });
 });
 
 describe('CreateProjectForm', () => {
