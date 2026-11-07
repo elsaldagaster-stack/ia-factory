@@ -37,6 +37,9 @@ export async function createProject(
   input: CreateProjectInput,
 ): Promise<ActionResult<Project>> {
   try {
+    if (!input.name.trim()) {
+      return { success: false, error: 'El nombre es requerido' };
+    }
     const userId = await requireUserId();
     const project = await dbCreateProject({
       name: input.name,
