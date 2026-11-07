@@ -1,6 +1,7 @@
 import React from 'react';
 import { ClerkProvider } from '@clerk/nextjs';
 import type { Metadata } from 'next';
+import '@tabler/core/dist/css/tabler.min.css';
 
 export const metadata: Metadata = {
   title: 'IA Factory',
