@@ -7,6 +7,7 @@ import {
   getProjectsByOwner,
   getProjectById,
   createProject as dbCreateProject,
+  deleteProject as dbDeleteProject,
   updateProject as dbUpdateProject,
 } from '@/lib/db/projects';
 
@@ -38,6 +39,19 @@ export async function getProjects(): Promise<Project[]> {
 export async function getProject(projectId: string): Promise<Project | null> {
   const userId = await requireUserId();
   return getProjectById(projectId, userId);
+}
+
+export async function deleteProject(projectId: string): Promise<ActionResult<Project>> {
+  try {
+    const userId = await requireUserId();
+    const project = await dbDeleteProject(projectId, userId);
+    if (!project) return { success: false, error: 'Proyecto no encontrado' };
+    revalidatePath('/projects');
+    return { success: true, project };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    return { success: false, error: message };
+  }
 }
 
 export async function updateProject(
