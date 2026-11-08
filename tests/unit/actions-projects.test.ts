@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getProjects, getProject, createProject } from '../../app/actions/projects';
+import { getProjects, getProject, createProject, updateProject } from '../../app/actions/projects';
 
 const mockAuth = vi.hoisted(() => vi.fn());
 const mockGetProjectsByOwner = vi.hoisted(() => vi.fn());
 const mockGetProjectById = vi.hoisted(() => vi.fn());
 const mockCreateProject = vi.hoisted(() => vi.fn());
+const mockUpdateProject = vi.hoisted(() => vi.fn());
 const mockRevalidatePath = vi.hoisted(() => vi.fn());
 
 vi.mock('@clerk/nextjs/server', () => ({ auth: mockAuth }));
@@ -13,6 +14,7 @@ vi.mock('../../lib/db/projects', () => ({
   getProjectsByOwner: mockGetProjectsByOwner,
   getProjectById: mockGetProjectById,
   createProject: mockCreateProject,
+  updateProject: mockUpdateProject,
 }));
 
 const USER_ID = 'user_abc123';
@@ -145,5 +147,97 @@ describe('createProject', () => {
     await createProject({ name: 'Test Project' });
 
     expect(mockRevalidatePath).not.toHaveBeenCalled();
+  });
+});
+
+describe('updateProject', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns failure when name is empty', async () => {
+    const result = await updateProject('proj_1', { name: '   ' });
+    expect(result).toEqual({ success: false, error: 'El nombre es requerido' });
+    expect(mockUpdateProject).not.toHaveBeenCalled();
+  });
+
+  it('updates project and returns success', async () => {
+    mockAuth.mockResolvedValueOnce({ userId: USER_ID });
+    const updated = { ...projectFixture, name: 'New Name' };
+    mockUpdateProject.mockResolvedValueOnce(updated);
+
+    const result = await updateProject('proj_1', { name: 'New Name' });
+
+    expect(result).toEqual({ success: true, project: updated });
+    expect(mockUpdateProject).toHaveBeenCalledWith('proj_1', USER_ID, { name: 'New Name' });
+  });
+
+  it('passes description when provided', async () => {
+    mockAuth.mockResolvedValueOnce({ userId: USER_ID });
+    const updated = { ...projectFixture, description: 'Desc' };
+    mockUpdateProject.mockResolvedValueOnce(updated);
+
+    await updateProject('proj_1', { name: 'Test', description: 'Desc' });
+
+    expect(mockUpdateProject).toHaveBeenCalledWith('proj_1', USER_ID, {
+      name: 'Test',
+      description: 'Desc',
+    });
+  });
+
+  it('saves empty description as null', async () => {
+    mockAuth.mockResolvedValueOnce({ userId: USER_ID });
+    mockUpdateProject.mockResolvedValueOnce(projectFixture);
+
+    await updateProject('proj_1', { name: 'Test', description: null });
+
+    expect(mockUpdateProject).toHaveBeenCalledWith('proj_1', USER_ID, {
+      name: 'Test',
+      description: null,
+    });
+  });
+
+  it('returns Not found when db returns null', async () => {
+    mockAuth.mockResolvedValueOnce({ userId: USER_ID });
+    mockUpdateProject.mockResolvedValueOnce(null);
+
+    const result = await updateProject('proj_999', { name: 'New Name' });
+
+    expect(result).toEqual({ success: false, error: 'Proyecto no encontrado' });
+  });
+
+  it('calls revalidatePath for /projects and /projects/[id] on success', async () => {
+    mockAuth.mockResolvedValueOnce({ userId: USER_ID });
+    mockUpdateProject.mockResolvedValueOnce({ ...projectFixture, name: 'New' });
+
+    await updateProject('proj_1', { name: 'New' });
+
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/projects');
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/projects/proj_1');
+    expect(mockRevalidatePath).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not call revalidatePath on failure', async () => {
+    mockAuth.mockResolvedValueOnce({ userId: USER_ID });
+    mockUpdateProject.mockResolvedValueOnce(null);
+
+    await updateProject('proj_999', { name: 'New' });
+
+    expect(mockRevalidatePath).not.toHaveBeenCalled();
+  });
+
+  it('returns failure when user is not authenticated', async () => {
+    mockAuth.mockResolvedValueOnce({ userId: null });
+
+    const result = await updateProject('proj_1', { name: 'Test' });
+
+    expect(result).toEqual({ success: false, error: 'Unauthorized' });
+  });
+
+  it('returns failure on unexpected db error', async () => {
+    mockAuth.mockResolvedValueOnce({ userId: USER_ID });
+    mockUpdateProject.mockRejectedValueOnce(new Error('DB connection failed'));
+
+    const result = await updateProject('proj_1', { name: 'Test' });
+
+    expect(result).toEqual({ success: false, error: 'DB connection failed' });
   });
 });

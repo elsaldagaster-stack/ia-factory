@@ -7,6 +7,7 @@ import {
   getProjectsByOwner,
   getProjectById,
   createProject as dbCreateProject,
+  updateProject as dbUpdateProject,
 } from '@/lib/db/projects';
 
 export type ActionResult<T> =
@@ -16,6 +17,11 @@ export type ActionResult<T> =
 interface CreateProjectInput {
   name: string;
   description?: string;
+}
+
+interface UpdateProjectInput {
+  name: string;
+  description?: string | null;
 }
 
 async function requireUserId(): Promise<string> {
@@ -32,6 +38,29 @@ export async function getProjects(): Promise<Project[]> {
 export async function getProject(projectId: string): Promise<Project | null> {
   const userId = await requireUserId();
   return getProjectById(projectId, userId);
+}
+
+export async function updateProject(
+  projectId: string,
+  input: UpdateProjectInput,
+): Promise<ActionResult<Project>> {
+  try {
+    if (!input.name.trim()) {
+      return { success: false, error: 'El nombre es requerido' };
+    }
+    const userId = await requireUserId();
+    const project = await dbUpdateProject(projectId, userId, {
+      name: input.name,
+      description: input.description,
+    });
+    if (!project) return { success: false, error: 'Proyecto no encontrado' };
+    revalidatePath('/projects');
+    revalidatePath(`/projects/${projectId}`);
+    return { success: true, project };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    return { success: false, error: message };
+  }
 }
 
 export async function createProject(
