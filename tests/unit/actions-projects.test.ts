@@ -5,8 +5,10 @@ const mockAuth = vi.hoisted(() => vi.fn());
 const mockGetProjectsByOwner = vi.hoisted(() => vi.fn());
 const mockGetProjectById = vi.hoisted(() => vi.fn());
 const mockCreateProject = vi.hoisted(() => vi.fn());
+const mockRevalidatePath = vi.hoisted(() => vi.fn());
 
 vi.mock('@clerk/nextjs/server', () => ({ auth: mockAuth }));
+vi.mock('next/cache', () => ({ revalidatePath: mockRevalidatePath }));
 vi.mock('../../lib/db/projects', () => ({
   getProjectsByOwner: mockGetProjectsByOwner,
   getProjectById: mockGetProjectById,
@@ -125,5 +127,23 @@ describe('createProject', () => {
     const result = await createProject({ name: 'Test Project' });
 
     expect(result).toEqual({ success: false, error: 'Unauthorized' });
+  });
+
+  it('calls revalidatePath on successful creation', async () => {
+    mockAuth.mockResolvedValueOnce({ userId: USER_ID });
+    mockCreateProject.mockResolvedValueOnce(projectFixture);
+
+    await createProject({ name: 'Test Project' });
+
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/projects');
+  });
+
+  it('does not call revalidatePath when creation fails', async () => {
+    mockAuth.mockResolvedValueOnce({ userId: USER_ID });
+    mockCreateProject.mockRejectedValueOnce(new Error('DB error'));
+
+    await createProject({ name: 'Test Project' });
+
+    expect(mockRevalidatePath).not.toHaveBeenCalled();
   });
 });

@@ -1,6 +1,7 @@
 'use server';
 
 import { auth } from '@clerk/nextjs/server';
+import { revalidatePath } from 'next/cache';
 import { type Project } from '@prisma/client';
 import {
   getProjectsByOwner,
@@ -46,6 +47,7 @@ export async function createProject(
       ownerId: userId,
       ...(input.description !== undefined && { description: input.description }),
     });
+    revalidatePath('/projects');
     return { success: true, project };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
