@@ -8,6 +8,7 @@ import {
   getProjectById,
   createProject as dbCreateProject,
   deleteProject as dbDeleteProject,
+  updateProject as dbUpdateProject,
 } from '@/lib/db/projects';
 
 export type ActionResult<T> =
@@ -17,6 +18,11 @@ export type ActionResult<T> =
 interface CreateProjectInput {
   name: string;
   description?: string;
+}
+
+interface UpdateProjectInput {
+  name: string;
+  description?: string | null;
 }
 
 async function requireUserId(): Promise<string> {
@@ -41,6 +47,22 @@ export async function deleteProject(projectId: string): Promise<ActionResult<Pro
     const project = await dbDeleteProject(projectId, userId);
     if (!project) return { success: false, error: 'Proyecto no encontrado' };
     revalidatePath('/projects');
+export async function updateProject(
+  projectId: string,
+  input: UpdateProjectInput,
+): Promise<ActionResult<Project>> {
+  try {
+    if (!input.name.trim()) {
+      return { success: false, error: 'El nombre es requerido' };
+    }
+    const userId = await requireUserId();
+    const project = await dbUpdateProject(projectId, userId, {
+      name: input.name,
+      description: input.description,
+    });
+    if (!project) return { success: false, error: 'Proyecto no encontrado' };
+    revalidatePath('/projects');
+    revalidatePath(`/projects/${projectId}`);
     return { success: true, project };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';

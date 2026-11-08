@@ -11,7 +11,7 @@ export interface CreateProjectData {
 
 export interface UpdateProjectData {
   name?: string;
-  description?: string;
+  description?: string | null;
   status?: ProjectStatus;
 }
 

@@ -6,3 +6,6 @@ coverage/
 !.env.example
 *.js.map
 *.d.ts.map
+
+# clerk configuration (can include secrets)
+/.clerk/
