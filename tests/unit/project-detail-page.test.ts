@@ -39,7 +39,7 @@ describe('ProjectDetailPage', () => {
     const { default: ProjectDetailPage } = await import('@/app/(auth)/projects/[id]/page');
     const jsx = await ProjectDetailPage({ params: Promise.resolve({ id: 'proj_1' }) });
     const { getByText } = render(jsx);
-    expect(getByText('A test description')).toBeDefined();
+    expect(getByText('A test description', { selector: 'p' })).toBeDefined();
   });
 
   it('renders back link to /projects', async () => {

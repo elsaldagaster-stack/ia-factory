@@ -2,6 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getProject } from '@/app/actions/projects';
+import EditProjectForm from '@/components/EditProjectForm';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -19,6 +20,7 @@ export default async function ProjectDetailPage({ params }: Props): Promise<Reac
       <h1>{project.name}</h1>
       <p>{project.status}</p>
       {project.description !== null && <p>{project.description}</p>}
+      <EditProjectForm project={project} />
     </div>
   );
 }
