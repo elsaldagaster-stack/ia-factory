@@ -31,6 +31,16 @@ describe('ProjectsPage', () => {
     expect(getByText('Test Project')).toBeDefined();
   });
 
+  it('renders project names as links to detail page', async () => {
+    mockGetProjects.mockResolvedValueOnce([projectFixture]);
+    const { default: ProjectsPage } = await import('@/app/(auth)/projects/page');
+    const jsx = await ProjectsPage();
+    const { getByRole } = render(jsx);
+    const link = getByRole('link', { name: 'Test Project' });
+    expect(link).toBeDefined();
+    expect((link as HTMLAnchorElement).href).toContain('/projects/proj_1');
+  });
+
   it('renders empty state when no projects', async () => {
     mockGetProjects.mockResolvedValueOnce([]);
     const { default: ProjectsPage } = await import('@/app/(auth)/projects/page');
