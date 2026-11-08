@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client-js"
+  engineType = "wasm"
 }
 
 datasource db {
@@ -24,8 +25,10 @@ model Project {
 // ACTIVE: project is being worked on
 // COMPLETED: project delivered successfully
 // ARCHIVED: project paused or abandoned
+// DELETED: soft-deleted — hidden from all queries, never hard-deleted
 enum ProjectStatus {
   ACTIVE
   COMPLETED
   ARCHIVED
+  DELETED
 }

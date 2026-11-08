@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getProject } from '@/app/actions/projects';
 import ChangeProjectStatusButton from '@/components/ChangeProjectStatusButton';
+import DeleteProjectButton from '@/components/DeleteProjectButton';
+import EditProjectForm from '@/components/EditProjectForm';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -23,6 +25,8 @@ export default async function ProjectDetailPage({ params }: Props): Promise<Reac
       {(project.status === 'ACTIVE' || project.status === 'ARCHIVED') && (
         <ChangeProjectStatusButton projectId={project.id} currentStatus={project.status} />
       )}
+      <DeleteProjectButton projectId={id} />
+      <EditProjectForm project={project} />
     </div>
   );
 }

@@ -7,6 +7,7 @@ import {
   getProjectsByOwner,
   getProjectById,
   createProject as dbCreateProject,
+  deleteProject as dbDeleteProject,
   updateProject as dbUpdateProject,
   type ProjectStatus,
 } from '@/lib/db/projects';
@@ -18,6 +19,11 @@ export type ActionResult<T> =
 interface CreateProjectInput {
   name: string;
   description?: string;
+}
+
+interface UpdateProjectInput {
+  name: string;
+  description?: string | null;
 }
 
 async function requireUserId(): Promise<string> {
@@ -43,6 +49,42 @@ export async function changeProjectStatus(
   try {
     const userId = await requireUserId();
     const project = await dbUpdateProject(projectId, userId, { status: newStatus });
+    if (!project) return { success: false, error: 'Proyecto no encontrado' };
+    revalidatePath('/projects');
+    revalidatePath(`/projects/${projectId}`);
+    return { success: true, project };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    return { success: false, error: message };
+  }
+}
+
+export async function deleteProject(projectId: string): Promise<ActionResult<Project>> {
+  try {
+    const userId = await requireUserId();
+    const project = await dbDeleteProject(projectId, userId);
+    if (!project) return { success: false, error: 'Proyecto no encontrado' };
+    revalidatePath('/projects');
+    return { success: true, project };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    return { success: false, error: message };
+  }
+}
+
+export async function updateProject(
+  projectId: string,
+  input: UpdateProjectInput,
+): Promise<ActionResult<Project>> {
+  try {
+    if (!input.name.trim()) {
+      return { success: false, error: 'El nombre es requerido' };
+    }
+    const userId = await requireUserId();
+    const project = await dbUpdateProject(projectId, userId, {
+      name: input.name,
+      description: input.description,
+    });
     if (!project) return { success: false, error: 'Proyecto no encontrado' };
     revalidatePath('/projects');
     revalidatePath(`/projects/${projectId}`);
