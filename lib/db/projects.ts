@@ -17,7 +17,7 @@ export interface UpdateProjectData {
 
 export async function getProjectsByOwner(ownerId: string): Promise<Project[]> {
   return prisma.project.findMany({
-    where: { ownerId },
+    where: { ownerId, status: { not: 'DELETED' } },
     orderBy: { createdAt: 'desc' },
   });
 }
@@ -33,8 +33,25 @@ export async function getProjectById(
   ownerId: string,
 ): Promise<Project | null> {
   return prisma.project.findFirst({
-    where: { id, ownerId },
+    where: { id, ownerId, status: { not: 'DELETED' } },
   });
+}
+
+export async function deleteProject(
+  id: string,
+  ownerId: string,
+): Promise<Project | null> {
+  try {
+    return await prisma.project.update({
+      where: { id, ownerId },
+      data: { status: 'DELETED' },
+    });
+  } catch (err) {
+    if ((err as { code?: string }).code === 'P2025') {
+      return null;
+    }
+    throw err;
+  }
 }
 
 export async function updateProject(
