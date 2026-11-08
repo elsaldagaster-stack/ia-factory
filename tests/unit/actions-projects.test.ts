@@ -1,10 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getProjects, getProject, createProject } from '../../app/actions/projects';
+import {
+  getProjects,
+  getProject,
+  createProject,
+  changeProjectStatus,
+} from '../../app/actions/projects';
 
 const mockAuth = vi.hoisted(() => vi.fn());
 const mockGetProjectsByOwner = vi.hoisted(() => vi.fn());
 const mockGetProjectById = vi.hoisted(() => vi.fn());
 const mockCreateProject = vi.hoisted(() => vi.fn());
+const mockUpdateProject = vi.hoisted(() => vi.fn());
 const mockRevalidatePath = vi.hoisted(() => vi.fn());
 
 vi.mock('@clerk/nextjs/server', () => ({ auth: mockAuth }));
@@ -13,6 +19,7 @@ vi.mock('../../lib/db/projects', () => ({
   getProjectsByOwner: mockGetProjectsByOwner,
   getProjectById: mockGetProjectById,
   createProject: mockCreateProject,
+  updateProject: mockUpdateProject,
 }));
 
 const USER_ID = 'user_abc123';
@@ -143,6 +150,62 @@ describe('createProject', () => {
     mockCreateProject.mockRejectedValueOnce(new Error('DB error'));
 
     await createProject({ name: 'Test Project' });
+
+    expect(mockRevalidatePath).not.toHaveBeenCalled();
+  });
+});
+
+describe('changeProjectStatus', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('sets status to ARCHIVED when current is ACTIVE', async () => {
+    mockAuth.mockResolvedValueOnce({ userId: USER_ID });
+    const updated = { ...projectFixture, status: 'ARCHIVED' as const };
+    mockUpdateProject.mockResolvedValueOnce(updated);
+
+    const result = await changeProjectStatus('proj_1', 'ARCHIVED');
+
+    expect(result).toEqual({ success: true, project: updated });
+    expect(mockUpdateProject).toHaveBeenCalledWith('proj_1', USER_ID, { status: 'ARCHIVED' });
+  });
+
+  it('sets status to ACTIVE when current is ARCHIVED', async () => {
+    mockAuth.mockResolvedValueOnce({ userId: USER_ID });
+    const updated = { ...projectFixture, status: 'ACTIVE' as const };
+    mockUpdateProject.mockResolvedValueOnce(updated);
+
+    const result = await changeProjectStatus('proj_1', 'ACTIVE');
+
+    expect(result).toEqual({ success: true, project: updated });
+    expect(mockUpdateProject).toHaveBeenCalledWith('proj_1', USER_ID, { status: 'ACTIVE' });
+  });
+
+  it('returns Not found when updateProject returns null', async () => {
+    mockAuth.mockResolvedValueOnce({ userId: USER_ID });
+    mockUpdateProject.mockResolvedValueOnce(null);
+
+    const result = await changeProjectStatus('proj_999', 'ARCHIVED');
+
+    expect(result).toEqual({ success: false, error: 'Proyecto no encontrado' });
+  });
+
+  it('calls revalidatePath for /projects and /projects/[id] on success', async () => {
+    mockAuth.mockResolvedValueOnce({ userId: USER_ID });
+    const updated = { ...projectFixture, status: 'ARCHIVED' as const };
+    mockUpdateProject.mockResolvedValueOnce(updated);
+
+    await changeProjectStatus('proj_1', 'ARCHIVED');
+
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/projects');
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/projects/proj_1');
+    expect(mockRevalidatePath).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not call revalidatePath on failure', async () => {
+    mockAuth.mockResolvedValueOnce({ userId: USER_ID });
+    mockUpdateProject.mockResolvedValueOnce(null);
+
+    await changeProjectStatus('proj_999', 'ARCHIVED');
 
     expect(mockRevalidatePath).not.toHaveBeenCalled();
   });
