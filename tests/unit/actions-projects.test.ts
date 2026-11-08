@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getProjects, getProject, createProject } from '../../app/actions/projects';
+import { getProjects, getProject, createProject, deleteProject } from '../../app/actions/projects';
 
 const mockAuth = vi.hoisted(() => vi.fn());
 const mockGetProjectsByOwner = vi.hoisted(() => vi.fn());
 const mockGetProjectById = vi.hoisted(() => vi.fn());
 const mockCreateProject = vi.hoisted(() => vi.fn());
+const mockDeleteProject = vi.hoisted(() => vi.fn());
 const mockRevalidatePath = vi.hoisted(() => vi.fn());
 
 vi.mock('@clerk/nextjs/server', () => ({ auth: mockAuth }));
@@ -13,6 +14,7 @@ vi.mock('../../lib/db/projects', () => ({
   getProjectsByOwner: mockGetProjectsByOwner,
   getProjectById: mockGetProjectById,
   createProject: mockCreateProject,
+  deleteProject: mockDeleteProject,
 }));
 
 const USER_ID = 'user_abc123';
@@ -145,5 +147,66 @@ describe('createProject', () => {
     await createProject({ name: 'Test Project' });
 
     expect(mockRevalidatePath).not.toHaveBeenCalled();
+  });
+});
+
+describe('deleteProject', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('calls dbDeleteProject with projectId and userId', async () => {
+    mockAuth.mockResolvedValueOnce({ userId: USER_ID });
+    const deleted = { ...projectFixture, status: 'DELETED' as const };
+    mockDeleteProject.mockResolvedValueOnce(deleted);
+
+    await deleteProject('proj_1');
+
+    expect(mockDeleteProject).toHaveBeenCalledWith('proj_1', USER_ID);
+  });
+
+  it('returns success on successful delete', async () => {
+    mockAuth.mockResolvedValueOnce({ userId: USER_ID });
+    const deleted = { ...projectFixture, status: 'DELETED' as const };
+    mockDeleteProject.mockResolvedValueOnce(deleted);
+
+    const result = await deleteProject('proj_1');
+
+    expect(result).toEqual({ success: true, project: deleted });
+  });
+
+  it('returns Not found when dbDeleteProject returns null', async () => {
+    mockAuth.mockResolvedValueOnce({ userId: USER_ID });
+    mockDeleteProject.mockResolvedValueOnce(null);
+
+    const result = await deleteProject('proj_999');
+
+    expect(result).toEqual({ success: false, error: 'Proyecto no encontrado' });
+  });
+
+  it('calls revalidatePath /projects on success', async () => {
+    mockAuth.mockResolvedValueOnce({ userId: USER_ID });
+    const deleted = { ...projectFixture, status: 'DELETED' as const };
+    mockDeleteProject.mockResolvedValueOnce(deleted);
+
+    await deleteProject('proj_1');
+
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/projects');
+  });
+
+  it('does not call revalidatePath on failure', async () => {
+    mockAuth.mockResolvedValueOnce({ userId: USER_ID });
+    mockDeleteProject.mockResolvedValueOnce(null);
+
+    await deleteProject('proj_999');
+
+    expect(mockRevalidatePath).not.toHaveBeenCalled();
+  });
+
+  it('returns failure result on unexpected error', async () => {
+    mockAuth.mockResolvedValueOnce({ userId: USER_ID });
+    mockDeleteProject.mockRejectedValueOnce(new Error('DB connection failed'));
+
+    const result = await deleteProject('proj_1');
+
+    expect(result).toEqual({ success: false, error: 'DB connection failed' });
   });
 });
