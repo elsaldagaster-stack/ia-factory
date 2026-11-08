@@ -47,6 +47,13 @@ export async function deleteProject(projectId: string): Promise<ActionResult<Pro
     const project = await dbDeleteProject(projectId, userId);
     if (!project) return { success: false, error: 'Proyecto no encontrado' };
     revalidatePath('/projects');
+    return { success: true, project };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    return { success: false, error: message };
+  }
+}
+
 export async function updateProject(
   projectId: string,
   input: UpdateProjectInput,
